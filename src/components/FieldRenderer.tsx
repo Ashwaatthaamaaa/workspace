@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FormField } from "../types";
 
 const FieldRenderer: React.FC<{
@@ -8,8 +8,15 @@ const FieldRenderer: React.FC<{
 }> = ({ field, value, onChange }) => {
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Validate the field whenever the value changes
+    if (value) {
+      validateField(value);
+    }
+  }, [value]);
+
   const validateField = (value: any): boolean => {
-    if (field.required && !value) {
+    if (field.required && (!value || value.trim() === "")) {
       setError(`${field.label} is required.`);
       return false;
     }
@@ -28,12 +35,16 @@ const FieldRenderer: React.FC<{
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const newValue = e.target.value;
-    if (validateField(newValue)) {
-      onChange(field.fieldId, newValue);
-    }
+    onChange(field.fieldId, newValue); // Update parent state
+    validateField(newValue); // Validate input dynamically
+
+    // Ensure no unexpected navigation occurs
+    e.stopPropagation(); // Prevent event propagation
   };
 
   const renderFieldInput = () => {
@@ -73,6 +84,23 @@ const FieldRenderer: React.FC<{
               </option>
             ))}
           </select>
+        );
+      case "radio":
+        return (
+          <div id={field.fieldId}>
+            {field.options?.map((option) => (
+              <label key={option.value} style={{ marginRight: "10px" }}>
+                <input
+                  type="radio"
+                  name={field.fieldId}
+                  value={option.value}
+                  checked={value === option.value}
+                  onChange={handleChange}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
         );
       default:
         return null;
